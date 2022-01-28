@@ -10,12 +10,12 @@ from telegram.ext import run_async, CallbackContext, CommandHandler
 from bot import dispatcher, IMAGE_URL
 
 def shorten(description, info = 'anilist.co'):
-    msg = "" 
+    msg = ""
     if len(description) > 700:
-           description = description[0:500] + '....'
-           msg += f"\n*Description*: _{description}_[Read More]({info})"
+        description = description[:500] + '....'
+        msg += f"\n*Description*: _{description}_[Read More]({info})"
     else:
-          msg += f"\n*Description*:_{description}_"
+        msg += f"\n*Description*:_{description}_"
     return msg
 
 
@@ -155,13 +155,18 @@ def anime(update: Update, context: CallbackContext):
     if len(search) == 1: return
     else: search = search[1]
     variables = {'search' : search}
-    json = requests.post(url, json={'query': anime_query, 'variables': variables}).json()['data'].get('Media', None)
-    if json:
+    if (
+        json := requests.post(
+            url, json={'query': anime_query, 'variables': variables}
+        )
+        .json()['data']
+        .get('Media', None)
+    ):
         msg = f"*{json['title']['romaji']}*(`{json['title']['native']}`)\n*Type*: {json['format']}\n*Status*: {json['status']}\n*Episodes*: {json.get('episodes', 'N/A')}\n*Duration*: {json.get('duration', 'N/A')} Per Ep.\n*Score*: {json['averageScore']}\n*Genres*: `"
         for x in json['genres']: msg += f"{x}, "
         msg = msg[:-2] + '`\n'
         msg += "*Studios*: `"
-        for x in json['studios']['nodes']: msg += f"{x['name']}, " 
+        for x in json['studios']['nodes']: msg += f"{x['name']}, "
         msg = msg[:-2] + '`\n'
         info = json.get('siteUrl')
         trailer = json.get('trailer', None)
@@ -170,7 +175,7 @@ def anime(update: Update, context: CallbackContext):
             site = trailer.get('site', None)
             if site == "youtube": trailer = 'https://youtu.be/' + trailer_id
         description = json.get('description', 'N/A').replace('<i>', '').replace('</i>', '').replace('<br>', '')
-        msg += shorten(description, info) 
+        msg += shorten(description, info)
         image = json.get('bannerImage', None)
         if trailer:
             buttons = [
@@ -199,17 +204,22 @@ def character(update: Update, _):
         return
     search = search[1]
     variables = {'query': search}
-    json = requests.post(url, json={'query': character_query, 'variables': variables}).json()['data'].get('Character', None)
-    if json:
+    if (
+        json := requests.post(
+            url, json={'query': character_query, 'variables': variables}
+        )
+        .json()['data']
+        .get('Character', None)
+    ):
         msg = f"*{json.get('name').get('full')}*(`{json.get('name').get('native')}`)\n"
         description = f"{json['description']}"
         site_url = json.get('siteUrl')
         msg += shorten(description, site_url)
-        image = json.get('image', None)
-        if image:
+        if image := json.get('image', None):
             image = image.get('large')
             update.effective_message.reply_photo(photo = image, caption = msg, parse_mode=ParseMode.MARKDOWN)
-        else: update.effective_message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+        else:
+            update.effective_message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
 @run_async
 def manga(update: Update, _):
